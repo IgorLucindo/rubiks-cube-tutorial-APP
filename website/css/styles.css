@@ -1,0 +1,23 @@
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #222;
+    color: white;
+    font-family: sans-serif;
+}
+
+canvas {
+    border: 2px solid #555;
+    margin-top: 10px;
+    max-width: 100%;
+}
+
+#status {
+    color: yellow;
+    margin: 10px;
+}
+
+video {
+    display: none;
+}

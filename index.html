@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rubik's Cube Solver</title>
+    <link rel="stylesheet" href="website/css/styles.css">
+</head>
+
+<body>
+    <h2>Rubik's Cube Detector (OpenCV.js)</h2>
+    <p id="status">Loading OpenCV...</p>
+    
+    <video id="videoInput" width="640" height="480" autoplay playsinline></video>
+    
+    <canvas id="canvasOutput"></canvas>
+
+    <!-- Scripts -->
+    <script async src="https://docs.opencv.org/4.5.0/opencv.js" onload="_onOpenCvReady();" type="text/javascript"></script>
+    <script type="module" src="website/src/index.js"></script>
+</body>
+</html>

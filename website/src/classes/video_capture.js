@@ -1,4 +1,4 @@
-import { sortGridByPosition, getAverageColor } from "../utils/computer_vision_utils.js";
+import { sortGridByPosition, getAverageColor, classifyColor } from "../utils/computer_vision_utils.js";
 
 
 export class VideoCapture {
@@ -128,6 +128,8 @@ export class VideoCapture {
                 });
             }
         }
+
+        return candidateRects;
     }
 
 

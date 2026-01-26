@@ -17,6 +17,13 @@
     <canvas id="canvasOutput"></canvas>
 
     <!-- Scripts -->
+    <script>
+        // Create a global promise that resolves when OpenCV loads and calls this function
+        window.cvReady = new Promise((resolve) => {
+            window._onOpenCvReady = resolve;
+        });
+    </script>
+
     <script async src="https://docs.opencv.org/4.5.0/opencv.js" onload="_onOpenCvReady();" type="text/javascript"></script>
     <script type="module" src="website/src/index.js"></script>
 </body>

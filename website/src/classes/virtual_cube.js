@@ -1,6 +1,3 @@
-import { classifyColor } from "../utils/computer_vision_utils.js";
-
-
 export class VirtualCube {
     constructor() {
         this.cubeState = {
@@ -62,12 +59,11 @@ export class VirtualCube {
 
     
     addFace(faceColors) {
-        // Convert Raw RGB to Sticker Notations (U, D, F...)
-        const stickers = faceColors.map(color => colorFace[color]);
+        // Convert colors to sticker notation
+        const stickers = faceColors.map(color => this.colorFace[color]);
 
         // Identify face id
-        const centerSticker = stickers[4];
-        const faceId = this.faceFromColor[centerSticker];
+        const faceId = stickers[4];
 
         // Save to state
         this.cubeState[faceId] = stickers;

@@ -67,56 +67,101 @@ export class VideoCapture {
     }
 
 
+    applyContrast(mat, alpha, beta) {
+        // alpha: Contrast control (1.0-3.0)
+        // beta: Brightness control (0-100)
+        mat.convertTo(mat, -1, alpha, beta);
+    }
+
+
+    adjustBrightness(mat) {
+        let mean = cv.mean(mat);
+        let brightness = mean[0]; 
+
+        // Default (Good Lighting)
+        let contrastParams = { alpha: 1.0, beta: 0 };
+        let adaptiveC = 2; 
+
+        if (brightness < 100) {
+            // Tier 1: Dim Room
+            contrastParams.alpha = 1.5; 
+            contrastParams.beta = 20;
+            adaptiveC = 0;
+        }
+        else if (brightness < 50) {
+            // Tier 2: Dark Room
+            contrastParams.alpha = 2.5;
+            contrastParams.beta = 50;
+            adaptiveC = -2; 
+        }
+
+        // Apply the chosen parameters
+        if (contrastParams.alpha !== 1.0) {
+            this.applyContrast(mat, contrastParams.alpha, contrastParams.beta);
+        }
+
+        return adaptiveC
+    }
+
+
     processLoop() {
         if (!this.isRunning) return;
 
         try {
-            // 1. Capture Frame
+            // Capture Frame
             this.cap.read(this.src);
 
-            // 2. Pre-process (Gray + Blur)
+            // Pre-process
             cv.cvtColor(this.src, this.gray, cv.COLOR_RGBA2GRAY);
-            cv.GaussianBlur(this.gray, this.blurred, {width: 5, height: 5}, 0);
+            
+            // Adjust brightness levels
+            let adaptiveC = this.adjustBrightness(this.gray);
 
-            // 3. Detect Edges (Canny)
-            cv.Canny(this.blurred, this.edges, 75, 200);
+            // Blur (Noise Reduction)
+            cv.GaussianBlur(this.gray, this.blurred, {width: 9, height: 9}, 0);
 
-            // 4. Find Contours
+            // Adaptive Threshold with DYNAMIC 'C' value
+            cv.adaptiveThreshold(this.blurred, this.edges, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 11, adaptiveC);
+
+            // Find Contours
             cv.findContours(this.edges, this.contours, this.hierarchy, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE);
 
-            // 5. Draw on output (Copy source to destination first)
+            // Draw on output
             this.src.copyTo(this.dst);
 
             for (let i = 0; i < this.contours.size(); ++i) {
                 let cnt = this.contours.get(i);
-                let peri = cv.arcLength(cnt, true);
-                
-                // Approximate polygon
-                cv.approxPolyDP(cnt, this.approx, 0.02 * peri, true);
+                let area = cv.contourArea(cnt);
 
-                // Filter for squares (4 sides, convex, reasonable size)
-                if (this.approx.rows === 4 && 
-                    cv.isContourConvex(this.approx) && 
-                    cv.contourArea(this.approx) > 1000) {
+                if (area < 1000) continue;
+
+                let peri = cv.arcLength(cnt, true);
+                cv.approxPolyDP(cnt, this.approx, 0.05 * peri, true); 
+
+                let rect = cv.boundingRect(this.approx);
+                let aspectRatio = rect.width / rect.height;
+
+                if (cv.isContourConvex(this.approx) && 
+                    this.approx.rows >= 4 && this.approx.rows <= 8 &&
+                    aspectRatio > 0.8 && aspectRatio < 1.2) {
                     
-                    // Draw red contour [255, 0, 0, 255]
-                    cv.drawContours(this.dst, this.contours, i, [255, 0, 0, 255], 3);
+                    // Draw contour in Green
+                    cv.drawContours(this.dst, this.contours, i, [0, 255, 0, 255], 3);
                 }
             }
 
-            // 6. Display
+            // 7. Display
             cv.imshow(this.canvasId, this.dst);
 
-            // Loop
             requestAnimationFrame(this.processLoop);
 
         } catch (err) {
             console.error("OpenCV Error:", err);
-            this.isRunning = false; // Stop loop on error
+            this.isRunning = false;
         }
     }
 
-    
+
     stop() {
         this.isRunning = false;
         // Cleanup memory

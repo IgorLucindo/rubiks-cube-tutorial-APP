@@ -1,3 +1,6 @@
+import { applySmartBrightness, sortGridByPosition, getAverageColor} from "./utils/computer_vision_utils.js";
+
+
 export class VideoCapture {
     constructor(videoId, canvasId) {
         this.video = document.getElementById(videoId);
@@ -67,40 +70,37 @@ export class VideoCapture {
     }
 
 
-    applyContrast(mat, alpha, beta) {
-        // alpha: Contrast control (1.0-3.0)
-        // beta: Brightness control (0-100)
-        mat.convertTo(mat, -1, alpha, beta);
-    }
+    drawCubeOverlay(candidateRects) {
+        if (candidateRects.length === 9) {
+            // Sort them into the correct 3x3 Grid
+            let sortedRects = sortGridByPosition(candidateRects);
 
+            // Visual Feedback (Green for Success)
+            sortedRects.forEach((rect, index) => {
+                let pt1 = new cv.Point(rect.x, rect.y);
+                let pt2 = new cv.Point(rect.x + rect.w, rect.y + rect.h);
+                
+                // Draw Green Box
+                cv.rectangle(this.dst, pt1, pt2, [0, 255, 0, 255], 3);
 
-    adjustBrightness(mat) {
-        let mean = cv.mean(mat);
-        let brightness = mean[0]; 
+                // Draw Index Number (0-8)
+                cv.putText(this.dst, "" + index, {x: rect.cx - 10, y: rect.cy + 10}, 
+                           cv.FONT_HERSHEY_SIMPLEX, 0.8, [255, 255, 255, 255], 2);
+            });
+            
+            // Return the sorted data so processLoop can use it for color sampling!
+            return sortedRects;
 
-        // Default (Good Lighting)
-        let contrastParams = { alpha: 1.0, beta: 0 };
-        let adaptiveC = 2; 
-
-        if (brightness < 100) {
-            // Tier 1: Dim Room
-            contrastParams.alpha = 1.5; 
-            contrastParams.beta = 20;
-            adaptiveC = 0;
+        } else {
+            // Fallback: Yellow boxes (Searching...)
+            candidateRects.forEach(rect => {
+                let pt1 = new cv.Point(rect.x, rect.y);
+                let pt2 = new cv.Point(rect.x + rect.w, rect.y + rect.h);
+                cv.rectangle(this.dst, pt1, pt2, [0, 255, 255, 255], 2); 
+            });
+            
+            return null;
         }
-        else if (brightness < 50) {
-            // Tier 2: Dark Room
-            contrastParams.alpha = 2.5;
-            contrastParams.beta = 50;
-            adaptiveC = -2; 
-        }
-
-        // Apply the chosen parameters
-        if (contrastParams.alpha !== 1.0) {
-            this.applyContrast(mat, contrastParams.alpha, contrastParams.beta);
-        }
-
-        return adaptiveC
     }
 
 
@@ -115,12 +115,10 @@ export class VideoCapture {
             cv.cvtColor(this.src, this.gray, cv.COLOR_RGBA2GRAY);
             
             // Adjust brightness levels
-            let adaptiveC = this.adjustBrightness(this.gray);
+            let adaptiveC = applySmartBrightness(this.gray);
 
-            // Blur (Noise Reduction)
+            // Blur & Threshold
             cv.GaussianBlur(this.gray, this.blurred, {width: 9, height: 9}, 0);
-
-            // Adaptive Threshold with DYNAMIC 'C' value
             cv.adaptiveThreshold(this.blurred, this.edges, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 11, adaptiveC);
 
             // Find Contours
@@ -129,6 +127,7 @@ export class VideoCapture {
             // Draw on output
             this.src.copyTo(this.dst);
 
+            let candidateRects = [];
             for (let i = 0; i < this.contours.size(); ++i) {
                 let cnt = this.contours.get(i);
                 let area = cv.contourArea(cnt);
@@ -141,16 +140,37 @@ export class VideoCapture {
                 let rect = cv.boundingRect(this.approx);
                 let aspectRatio = rect.width / rect.height;
 
+                // Robust Checks: Convex + 4-8 corners + Square-ish shape
                 if (cv.isContourConvex(this.approx) && 
                     this.approx.rows >= 4 && this.approx.rows <= 8 &&
                     aspectRatio > 0.8 && aspectRatio < 1.2) {
                     
-                    // Draw contour in Green
-                    cv.drawContours(this.dst, this.contours, i, [0, 255, 0, 255], 3);
+                    // Store valid candidate
+                    candidateRects.push({
+                        x: rect.x,
+                        y: rect.y,
+                        w: rect.width,
+                        h: rect.height,
+                        cx: rect.x + rect.width / 2, // Center X
+                        cy: rect.y + rect.height / 2, // Center Y
+                        cnt: cnt // Keep reference to draw later
+                    });
                 }
             }
 
-            // 7. Display
+            // draw and return the sorted grid
+            let validGrid = this.drawCubeOverlay(candidateRects);
+
+            if (validGrid) {
+                // SUCCESS! 'validGrid' contains the 9 sorted rects.
+                // We are now ready to extract colors.
+                
+                // Example usage for next step:
+                // let faceColors = this.scanFaceColors(validGrid);
+                // console.log("Scanned Face:", faceColors);
+            }
+
+            // Display
             cv.imshow(this.canvasId, this.dst);
 
             requestAnimationFrame(this.processLoop);

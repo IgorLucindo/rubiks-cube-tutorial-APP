@@ -1,23 +1,28 @@
 import { VideoCapture } from "./classes/video_capture.js";
+import { VirtualCube } from "./classes/virtual_cube.js";
+
+const videoCap = new VideoCapture('videoInput', 'canvasOutput');
+const virtualCube = new VirtualCube();
 
 
-// Define the startup function
-function startApp() {
-    console.log("OpenCV is ready. Starting App...");
-    // Instantiate the class with the IDs of your video and canvas elements
-    const videoCap = new VideoCapture('videoInput', 'canvasOutput');
-    videoCap.start();
-    
-    // Optional: Handle cleanup when user closes tab
-    window.onunload = () => videoCap.stop();
+function mainLoop() {
+    // Detects and return face colors of cube
+    const faceColors = videoCap.loop();
+
+    // Process face colors and construct virtual cube
+    virtualCube.loop(faceColors);
+
+    requestAnimationFrame(mainLoop);
 }
 
 
-// 1. Attach to window so the HTML script tag can call it
-window._onOpenCvReady = startApp;
-
-// 2. Fallback: If OpenCV loaded faster than this module, 'onload' might have missed.
-// Check if 'cv' is already defined globally.
-if (typeof cv !== 'undefined' && cv.Mat) {
-    startApp();
-}
+// Startup Sequence
+window._onOpenCvReady = () => {
+    console.log("OpenCV Ready. Initializing...");
+    videoCap.start().then(() => {
+        console.log("Camera Started. Beginning Global Loop.");
+        mainLoop();
+    }).catch(err => {
+        console.error("Failed to start camera:", err);
+    });
+};

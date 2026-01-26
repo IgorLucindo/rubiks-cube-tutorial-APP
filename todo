@@ -1,4 +1,3 @@
-- improve color recognition for dark places (red and blue)
 - add memory rect color identifier (for the case when trouble with identifying one color square. This makes possible to remember the color, making it easier to get all 9 colors for identifying one face)
 
 - add virtual cube

@@ -5,36 +5,6 @@ export function applyContrast(mat, alpha, beta) {
 }
 
 
-export function applySmartBrightness(mat) {
-    let mean = cv.mean(mat);
-    let brightness = mean[0]; 
-
-    // Default (Good Lighting)
-    let alpha = 1.0; 
-    let beta = 0;
-    let adaptiveC = 2; 
-
-    // Tier 1: Dim Room
-    if (brightness < 100) {
-        alpha = 1.5; 
-        beta = 20;
-        adaptiveC = 0;
-    }
-    
-    // Tier 2: Dark Room
-    if (brightness < 50) {
-        alpha = 2.5; 
-        beta = 50;
-        adaptiveC = -2; 
-    }
-
-    // Apply the chosen parameters
-    if (alpha !== 1.0) mat.convertTo(mat, -1, alpha, beta);
-
-    return adaptiveC
-}
-
-
 export function sortGridByPosition(rects) {
     // Sort by Vertical Position (Y)
     rects.sort((a, b) => a.cy - b.cy);
@@ -48,7 +18,10 @@ export function sortGridByPosition(rects) {
 }
 
 
-export function getAverageColor(mat, x, y) {
+export function getAverageColor(mat, rect) {
+    const x = rect.cx;
+    const y = rect.cy;
+
     // Create a 10x10 sample area around the center
     let region = new cv.Rect(x - 5, y - 5, 10, 10);
     
@@ -60,4 +33,34 @@ export function getAverageColor(mat, x, y) {
     roi.delete(); 
 
     return [mean[0], mean[1], mean[2]];
+}
+
+
+export function classifyColor(rgb) {
+    const palette = {
+        'white': [255, 255, 255],
+        'yellow': [255, 255, 0],
+        'green': [0, 255, 0],
+        'blue': [0, 0, 255],
+        'orange': [255, 165, 0],
+        'red': [255, 0, 0]
+    };
+
+    let minDistance = Infinity;
+    let bestMatch = null;
+
+    for (const [code, refRGB] of Object.entries(palette)) {
+        // Euclidean Distance
+        const dist = Math.sqrt(
+            Math.pow(rgb[0] - refRGB[0], 2) +
+            Math.pow(rgb[1] - refRGB[1], 2) +
+            Math.pow(rgb[2] - refRGB[2], 2)
+        );
+
+        if (dist < minDistance) {
+            minDistance = dist;
+            bestMatch = code;
+        }
+    }
+    return bestMatch;
 }

@@ -5,17 +5,75 @@ body {
     background: #222;
     color: white;
     font-family: sans-serif;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
-canvas {
+h3 {
+    margin: 5px 0;
+    font-size: 1rem;
+    color: #aaa;
+    text-align: center;
+}
+
+.app-layout {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 2vw;
+    width: 100%;
+    height: 100%;
+    padding: 0 20px 20px 20px;
+    box-sizing: border-box;
+}
+
+.camera-container, .cube-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    max-width: 45%;
+    height: 100%;
+}
+
+canvas#canvasOutput, #threeContainer {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    max-height: 80vh;
     border: 2px solid #555;
-    margin-top: 10px;
-    max-width: 100%;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    background: #000;
+    object-fit: contain;
+}
+
+#threeContainer {
+    background: #1a1a1a;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#threeContainer canvas {
+    width: 100%;
+    height: 100%;
+    outline: none;
+    display: block;
 }
 
 #status {
+    position: absolute;
+    bottom: 10px;
     color: yellow;
-    margin: 10px;
+    background: rgba(0,0,0,0.5);
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 1em;
 }
 
 video {

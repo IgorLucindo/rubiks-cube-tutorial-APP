@@ -9,21 +9,26 @@
 </head>
 
 <body>
-    <h2>Rubik's Cube Detector (OpenCV.js)</h2>
     <p id="status">Loading OpenCV...</p>
     
-    <video id="videoInput" width="640" height="480" autoplay playsinline></video>
-    
-    <canvas id="canvasOutput"></canvas>
+    <div class="app-layout">
+        <div class="camera-container">
+            <h3>Camera Feed</h3>
+            <video id="videoInput" width="640" height="480" autoplay playsinline style="display:none"></video>
+            <canvas id="canvasOutput"></canvas>
+        </div>
+
+        <div class="cube-container">
+            <h3>Virtual Cube</h3>
+            <div id="threeContainer"></div>
+        </div>
+    </div>
 
     <!-- Scripts -->
     <script>
-        // Create a global promise that resolves when OpenCV loads and calls this function
-        window.cvReady = new Promise((resolve) => {
-            window._onOpenCvReady = resolve;
-        });
+        window.cvReady = new Promise((resolve) => {window._onOpenCvReady = resolve;});
     </script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script async src="https://docs.opencv.org/4.5.0/opencv.js" onload="_onOpenCvReady();" type="text/javascript"></script>
     <script type="module" src="website/src/index.js"></script>
 </body>

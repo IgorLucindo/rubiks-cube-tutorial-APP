@@ -7,7 +7,6 @@ export class VideoCapture {
         this.canvasId = canvasId;
 
         // OpenCV objects
-        this.cap = null;
         this.src = null;
         this.dst = null;
         this.gray = null;
@@ -17,6 +16,8 @@ export class VideoCapture {
         this.hierarchy = null;
         this.approx = null;
         this.clahe = null;
+        this.helperCanvas = null;
+        this.helperCtx = null;
 
         this.isReady = false;
     }
@@ -43,9 +44,14 @@ export class VideoCapture {
     initOpenCvObjects() {
         const width = this.video.videoWidth;
         const height = this.video.videoHeight;
+        
+        // Setup Shadow Canvas
+        this.helperCanvas = document.createElement('canvas');
+        this.helperCanvas.width = width;
+        this.helperCanvas.height = height;
+        this.helperCtx = this.helperCanvas.getContext('2d', { willReadFrequently: true });
 
         // Core Mats
-        this.cap = new cv.VideoCapture(this.video);
         this.src = new cv.Mat(height, width, cv.CV_8UC4);
         this.dst = new cv.Mat(height, width, cv.CV_8UC4);
         this.clahe = new cv.CLAHE(40.0, new cv.Size(8, 8));
@@ -64,8 +70,12 @@ export class VideoCapture {
         if (!this.isReady) return null;
 
         try {
-            // Read and Preprocess
-            this.cap.read(this.src);
+            // Read
+            this.helperCtx.drawImage(this.video, 0, 0, this.src.cols, this.src.rows);
+            const imageData = this.helperCtx.getImageData(0, 0, this.src.cols, this.src.rows);
+            this.src.data.set(imageData.data);
+            
+            // Preprocess
             cv.cvtColor(this.src, this.gray, cv.COLOR_RGBA2GRAY);
             this.clahe.apply(this.gray, this.gray);
             cv.GaussianBlur(this.gray, this.blurred, {width: 9, height: 9}, 0);

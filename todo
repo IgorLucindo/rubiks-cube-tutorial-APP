@@ -1,8 +1,5 @@
+- make more robust color identifier (some times recognizes wrong face colors, which is a major flaw as it marks a face with wrong colors)
 - add memory rect color identifier (for the case when trouble with identifying one color square. This makes possible to remember the color, making it easier to get all 9 colors for identifying one face)
-
-- add virtual cube
-- while scanning faces, virtual cube completing itself
-- while scanning faces, virtual cube moves itself indicating what is the next face to scan
 
 - after completing the virtual cube, calculate solve moves
 - display solve movements in virtual cube when clicking forward step and backward step keys

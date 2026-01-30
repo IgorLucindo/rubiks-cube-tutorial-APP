@@ -21,46 +21,49 @@ export function sortGridByPosition(rects) {
 export function getAverageColor(mat, rect) {
     const x = rect.cx;
     const y = rect.cy;
-
-    // Create a 10x10 sample area around the center
-    let region = new cv.Rect(x - 5, y - 5, 10, 10);
     
-    // Safety check to avoid crashing if the box is on the edge of the screen
     if (x < 5 || y < 5 || x + 5 > mat.cols || y + 5 > mat.rows) return [0,0,0];
 
+    let region = new cv.Rect(x - 5, y - 5, 10, 10);
     let roi = mat.roi(region);
-    let mean = cv.mean(roi); // Returns [R, G, B, Alpha]
+    let mean = cv.mean(roi); // Returns [C1, C2, C3, C4]
     roi.delete(); 
 
+    // Return only the first 3 channels (RGB)
     return [mean[0], mean[1], mean[2]];
 }
 
 
-export function classifyColor(rgb) {
-    const palette = {
-        'white': [255, 255, 255],
-        'yellow': [255, 255, 0],
-        'green': [0, 255, 0],
-        'blue': [0, 0, 255],
-        'orange': [255, 165, 0],
-        'red': [255, 0, 0]
-    };
+export function classifyColor(rgb, hsvRanges) {
+    let rgbMat = cv.matFromArray(1, 1, cv.CV_8UC3, [rgb[0], rgb[1], rgb[2]]);
+    let hsvMat = new cv.Mat();
+    cv.cvtColor(rgbMat, hsvMat, cv.COLOR_RGB2HSV);
+    
+    let h = hsvMat.data[0];
+    let s = hsvMat.data[1];
+    let v = hsvMat.data[2];
 
-    let minDistance = Infinity;
-    let bestMatch = null;
+    rgbMat.delete();
+    hsvMat.delete();
 
-    for (const [code, refRGB] of Object.entries(palette)) {
-        // Euclidean Distance
-        const dist = Math.sqrt(
-            Math.pow(rgb[0] - refRGB[0], 2) +
-            Math.pow(rgb[1] - refRGB[1], 2) +
-            Math.pow(rgb[2] - refRGB[2], 2)
-        );
-
-        if (dist < minDistance) {
-            minDistance = dist;
-            bestMatch = code;
-        }
+    // If saturation is very low, classify as white immediately
+    const white = hsvRanges['white'];
+    if (s <= white.s[1] && v >= white.v[0]) {
+        return 'white';
     }
-    return bestMatch;
+
+    // check other colors
+    for (const [color, range] of Object.entries(hsvRanges)) {
+        if (color === 'white') continue;
+
+        const hRanges = Array.isArray(range.h[0]) ? range.h : [range.h];
+        
+        const hMatch = hRanges.some(r => h >= r[0] && h <= r[1]);
+        const sMatch = s >= range.s[0] && s <= range.s[1];
+        const vMatch = v >= range.v[0] && v <= range.v[1];
+
+        if (hMatch && sMatch && vMatch) return color;
+    }
+    
+    return null;
 }

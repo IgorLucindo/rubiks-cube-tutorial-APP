@@ -5,19 +5,6 @@ export class VirtualCube {
             'white': 'U', 'yellow': 'D', 'green': 'F', 
             'blue': 'B', 'orange': 'L', 'red': 'R'
         };
-        
-        this.scan_delay = 1000;
-        this.lastScanTime = 0;
-        this.isScanning = true;
-        this.nextMoveTimeout = null; // Store timeout ID to manage the pause
-
-        // --- 3D RENDERER STATE ---
-        this.container = document.getElementById('threeContainer');
-        this.scene = null;
-        this.camera = null;
-        this.renderer = null;
-        this.cubeGroup = null;
-        this.cubies = [];
 
         this.scaleState = {
             active: false,
@@ -35,6 +22,19 @@ export class VirtualCube {
             delayBeforeNext: 1200
         };
         
+        this.scan_delay = 1000;
+        this.lastScanTime = 0;
+        this.isScanning = true;
+        this.nextMoveTimeout = null;
+
+        // --- 3D RENDERER STATE ---
+        this.container = document.getElementById('threeContainer');
+        this.scene = null;
+        this.camera = null;
+        this.renderer = null;
+        this.cubeGroup = null;
+        this.cubies = [];
+
         this.initThreeJS();
         
         window.addEventListener('resize', () => this.handleResize());
@@ -103,31 +103,31 @@ export class VirtualCube {
         this.animateRotation();
         this.renderer.render(this.scene, this.camera);
 
-        if (faceColors && this.isScanning) {
-            const now = Date.now();
-            if (now - this.lastScanTime > this.scan_delay) {
-                const faceId = this.addFace(faceColors);
-                if (faceId) {
-                    this.lastScanTime = now;
-                    this.update3DColors(faceId, faceColors);
+        if (!faceColors || !this.isScanning) return;
 
-                    // Trigger animation
-                    this.scaleState.active = true;
-                    this.scaleState.startTime = Date.now();
-                    this.rotationState.duration = 800;
-                    this.setTargetRotation(this.getRotationForFace(faceId));
+        const now = Date.now();
+        if (now - this.lastScanTime > this.scan_delay) {
+            const faceId = this.addFace(faceColors);
+            if (faceId) {
+                this.lastScanTime = now;
+                this.update3DColors(faceId, faceColors);
 
-                    if (this.isComplete()) {
-                        console.log("CUBE COMPLETE!");
-                    } else {
-                        // DELAYED GUIDE: Wait for the pulse/confirmation before moving
-                        if (this.nextMoveTimeout) clearTimeout(this.nextMoveTimeout);
-                        
-                        this.nextMoveTimeout = setTimeout(() => {
-                            this.rotationState.duration = 1500;
-                            this.guideToNextFace();
-                        }, this.rotationState.delayBeforeNext); 
-                    }
+                // Trigger animation
+                this.scaleState.active = true;
+                this.scaleState.startTime = Date.now();
+                this.rotationState.duration = 800;
+                this.setTargetRotation(this.getRotationForFace(faceId));
+
+                if (this.isComplete()) {
+                    console.log("CUBE COMPLETE!");
+                } else {
+                    // Wait for the pulse/confirmation before moving
+                    if (this.nextMoveTimeout) clearTimeout(this.nextMoveTimeout);
+                    
+                    this.nextMoveTimeout = setTimeout(() => {
+                        this.rotationState.duration = 1500;
+                        this.guideToNextFace();
+                    }, this.rotationState.delayBeforeNext); 
                 }
             }
         }

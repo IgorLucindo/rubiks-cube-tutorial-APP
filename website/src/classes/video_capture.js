@@ -6,6 +6,27 @@ export class VideoCapture {
         this.video = document.getElementById(videoId);
         this.canvasId = canvasId;
 
+        this.hsvRanges = {
+            'white':  { h: [0, 180], s: [0, 30],   v: [100, 255] },
+            'yellow': { h: [20, 35],  s: [100, 255], v: [100, 255] },
+            'green':  { h: [40, 90],  s: [100, 255], v: [50, 255] },
+            'blue':   { h: [100, 135], s: [80, 255],  v: [40, 255] },
+            'orange': { h: [10, 18],  s: [100, 255], v: [100, 255] },
+            'red':    { h: [0, 8],    s: [100, 255], v: [50, 255] } 
+        };
+
+        this.animationState = {
+            active: false,
+            startTime: 0,
+            duration: 500,
+            rects: [],
+            faceId: ''
+        };
+        
+        this.stickerMemory = Array.from({ length: 9 }, () => []);
+        this.lastConfirmedFaceId = null;
+        this.isReady = false;
+
         // OpenCV objects
         this.src = null;
         this.dst = null;
@@ -18,16 +39,6 @@ export class VideoCapture {
         this.clahe = null;
         this.helperCanvas = null;
         this.helperCtx = null;
-
-        this.isReady = false;
-
-        this.animationState = {
-            active: false,
-            startTime: 0,
-            duration: 500,
-            rects: [],
-            faceId: ''
-        };
     }
 
 
@@ -71,6 +82,9 @@ export class VideoCapture {
         this.contours = new cv.MatVector();
         this.hierarchy = new cv.Mat();
         this.approx = new cv.Mat();
+        this.lab = new cv.Mat();
+        this.labChannels = new cv.MatVector();
+        this.srcClahe = new cv.Mat();
     }
 
 
@@ -82,8 +96,14 @@ export class VideoCapture {
             this.helperCtx.drawImage(this.video, 0, 0, this.src.cols, this.src.rows);
             const imageData = this.helperCtx.getImageData(0, 0, this.src.cols, this.src.rows);
             this.src.data.set(imageData.data);
-            
+
             // Preprocess
+            cv.cvtColor(this.src, this.lab, cv.COLOR_RGBA2RGB);
+            cv.cvtColor(this.lab, this.lab, cv.COLOR_RGB2Lab);
+            cv.split(this.lab, this.labChannels);
+            this.clahe.apply(this.labChannels.get(0), this.labChannels.get(0));
+            cv.merge(this.labChannels, this.lab);
+            cv.cvtColor(this.lab, this.srcClahe, cv.COLOR_Lab2RGB);
             cv.cvtColor(this.src, this.gray, cv.COLOR_RGBA2GRAY);
             this.clahe.apply(this.gray, this.gray);
             cv.GaussianBlur(this.gray, this.blurred, {width: 9, height: 9}, 0);
@@ -101,11 +121,14 @@ export class VideoCapture {
             // If found a valid face
             if (candidateRects.length === 9) {
                 let faceRects = sortGridByPosition(candidateRects);
-                let rawColors = this.scanFaceColors(faceRects);
-                faceColors = rawColors.map(color => classifyColor(color));
+                let rawColors = faceRects.map(rect => getAverageColor(this.srcClahe, rect));
+                let currentScan = rawColors.map(color => classifyColor(color, this.hsvRanges));
+                faceColors = this.resolveFaceColors(currentScan);
 
-                const faceId = faceColors[4];
-                this.triggerFaceHighlight(faceRects, faceId);
+                if (faceColors) {
+                    const faceId = faceColors[4];
+                    this.triggerFaceHighlight(faceRects, faceId);
+                }
             }
 
             // Display
@@ -212,8 +235,34 @@ export class VideoCapture {
     }
 
 
-    scanFaceColors(faceRects) {
-        return faceRects.map(rect => getAverageColor(this.src, rect));
+    resolveFaceColors(currentScan) {
+        // Update historical memory for each sticker
+        currentScan.forEach((color, i) => {
+            this.stickerMemory[i].push(color);
+            if (this.stickerMemory[i].length > 10) this.stickerMemory[i].shift();
+        });
+
+        // Determine the most probable color (Mode) for each sticker
+        const resolvedColors = this.stickerMemory.map(history => {
+            const validHistory = history.filter(c => c !== null);
+            // Confidence check: require at least 5 successful detections in the window
+            if (validHistory.length < 5) return null; 
+
+            return validHistory.reduce((a, b, i, arr) =>
+                (arr.filter(v => v === a).length >= arr.filter(v => v === b).length ? a : b)
+            );
+        });
+
+        // Reset face sticker memories if the center color (Face ID) changes
+        const currentCenterColor = resolvedColors[4];
+        if (currentCenterColor && currentCenterColor !== this.lastConfirmedFaceId) {
+            this.stickerMemory.forEach(history => history.length = 0); 
+            this.lastConfirmedFaceId = currentCenterColor;
+            return null; // Don't return colors during the transition frame
+        }
+
+        // Return the full set only if every sticker is confidently identified
+        return resolvedColors.every(c => c !== null) ? resolvedColors : null;
     }
 
 

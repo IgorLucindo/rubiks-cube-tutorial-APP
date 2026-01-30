@@ -1,5 +1,10 @@
 - make more robust color identifier (some times recognizes wrong face colors, which is a major flaw as it marks a face with wrong colors)
 - add memory rect color identifier (for the case when trouble with identifying one color square. This makes possible to remember the color, making it easier to get all 9 colors for identifying one face)
 
+- have virtual cube with no face determined. then after first face scan, the face shown in virtual cube to us becomes the scanned face (currently the virtual cube has already all faces mapped, so if we first face scan, the cube rotates to that face, but what I want is that the face that is shown to us becomes exactly the scanned face, without first rotation)
+- do, after first face scan, we are now possible to map the other faces of virtual cube. after that we color all center squares of all other faces of virtual cube.
+- make it only possible to scan the shown face to us (e.g., if in virtual cube rotates to the face with red center square, we are only allowed to scan the red face in next scan). this makes a more robust scan, avoiding people to get lost and scan a rotated face, compromising the complete scan of the physical cube. Also, the colored center square will help people identify which face is to scan.
+- Also, how to advise people to scan the cube and follow rotations of the virtual cube, while also advising to not scan rotated faces?
+
 - after completing the virtual cube, calculate solve moves
 - display solve movements in virtual cube when clicking forward step and backward step keys

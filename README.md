@@ -1,6 +1,6 @@
-# 🧩 Rubik's Cube Solver
+# 🧩 Rubik's Cube Tutorial
 
-[![Open App](https://img.shields.io/badge/OPEN_APP-Rubik's_Cube_Solver-2ea44f?style=for-the-badge)](https://igorlucindo.github.io/rubiks-cube-solver-APP/)
+[![Open App](https://img.shields.io/badge/OPEN_APP-Rubik's_Cube_Tutorial-2ea44f?style=for-the-badge)](https://igorlucindo.github.io/rubiks-cube-tutorial-APP//)
 
 A web application that utilizes **Computer Vision** to scan a physical Rubik's Cube and visualizes it in real-time using a **3D Virtual Model**. It bridges the physical and digital worlds by mapping the state of a real cube onto a digital twin.
 
@@ -31,8 +31,8 @@ This project is built using modern web technologies and powerful libraries locat
 
 ## 🚀 Interactive App
 
-To make computer vision accessible to everyone, we provide a web-based version of the solver. This interactive tool allows users to scan their own cubes using a standard webcam without installing any software.
+To make computer vision accessible to everyone, we provide a web-based tutorial. This interactive tool allows users to scan their own cubes using a standard webcam without installing any software.
 
-[![Open App](https://img.shields.io/badge/OPEN_APP-Rubik's_Cube_Solver-2ea44f?style=for-the-badge)](https://igorlucindo.github.io/rubiks-cube-solver-APP/)
+[![Open App](https://img.shields.io/badge/OPEN_APP-Rubik's_Cube_Tutorial-2ea44f?style=for-the-badge)](https://igorlucindo.github.io/rubiks-cube-tutorial-APP/)
 
 Users can simply hold their cube up to the camera, and the application will automatically detect the face, lock in the colors, and guide them to the next step of the solution.

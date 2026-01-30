@@ -20,6 +20,14 @@ export class VideoCapture {
         this.helperCtx = null;
 
         this.isReady = false;
+
+        this.animationState = {
+            active: false,
+            startTime: 0,
+            duration: 500,
+            rects: [],
+            faceId: ''
+        };
     }
 
 
@@ -95,9 +103,13 @@ export class VideoCapture {
                 let faceRects = sortGridByPosition(candidateRects);
                 let rawColors = this.scanFaceColors(faceRects);
                 faceColors = rawColors.map(color => classifyColor(color));
+
+                const faceId = faceColors[4];
+                this.triggerFaceHighlight(faceRects, faceId);
             }
 
             // Display
+            this.renderFaceHighlight();
             cv.imshow(this.canvasId, this.dst);
 
             return faceColors;
@@ -202,5 +214,58 @@ export class VideoCapture {
 
     scanFaceColors(faceRects) {
         return faceRects.map(rect => getAverageColor(this.src, rect));
+    }
+
+
+    triggerFaceHighlight(faceRects, faceId) {
+        this.animationState.active = true;
+        this.animationState.startTime = Date.now();
+        this.animationState.rects = faceRects;
+        this.animationState.faceId = faceId;
+    }
+
+
+    renderFaceHighlight() {
+        if (!this.animationState.active) return;
+
+        const elapsed = Date.now() - this.animationState.startTime;
+        const progress = elapsed / this.animationState.duration;
+
+        if (progress >= 1) {
+            this.animationState.active = false;
+            return;
+        }
+
+        // Easing function for smoothness (Ease-Out)
+        const fade = 1 - Math.pow(progress, 2);
+        const fillAlpha = 0.25 * fade;
+        const borderAlpha = 0.6 * fade;
+
+        const faceRects = this.animationState.rects;
+        const padding = 15;
+        let minX = Math.min(...faceRects.map(r => r.x)) - padding;
+        let minY = Math.min(...faceRects.map(r => r.y)) - padding;
+        let maxX = Math.max(...faceRects.map(r => r.x + r.w)) + padding;
+        let maxY = Math.max(...faceRects.map(r => r.y + r.h)) + padding;
+
+        let point1 = new cv.Point(minX, minY);
+        let point2 = new cv.Point(maxX, maxY);
+
+        // Create overlay for transparency
+        let overlay = this.dst.clone();
+        
+        // Solid fill with fading alpha
+        cv.rectangle(overlay, point1, point2, [255, 255, 255, 255], -1);
+        cv.addWeighted(overlay, fillAlpha, this.dst, 1, 0, this.dst);
+
+        // Smoother Border (draw multiple times for subtle glow or just once with alpha)
+        cv.rectangle(this.dst, point1, point2, [255, 255, 255, 255 * borderAlpha], 1, cv.LINE_AA, 0);
+
+        // Fading Text
+        const label = `${this.animationState.faceId.toUpperCase()} FACE`;
+        cv.putText(this.dst, label, {x: minX, y: minY - 12}, 
+                cv.FONT_HERSHEY_SIMPLEX, 0.6, [255, 255, 255, 255 * fade], 2);
+
+        overlay.delete();
     }
 }

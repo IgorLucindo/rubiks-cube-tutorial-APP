@@ -1,5 +1,4 @@
 - adjust colors (it thinks orange is red and it has a lot of trouble with recognizing red in dim lighting)
-- advise player to put white color upside down for scanning (a more guarantee of accurate scanning, avoiding physical face rotations) (put this advise instead of the initial Loading OpenCV, user doesn't care about that)
 
 - after completing the virtual cube, calculate solve moves
 - display solve movements in virtual cube when clicking forward step and backward step keys

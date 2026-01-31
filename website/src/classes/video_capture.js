@@ -38,7 +38,6 @@ export class VideoCapture {
         this.isReady = false;
         this.scanCooldown = 2000;
         this.lastSuccessTime = 0;
-        this.isFirstScan = true;
 
         // OpenCV objects
         this.src = null;
@@ -305,7 +304,6 @@ export class VideoCapture {
             this.triggerFaceHighlight(faceRects, faceId);
             this.resetStickerMemory();
             this.lastSuccessTime = Date.now();
-            this.isFirstScan = false;
 
             return faceColors;
         }
@@ -382,16 +380,9 @@ export class VideoCapture {
         const statusDiv = document.getElementById('status');
         if (!statusDiv) return;
 
-        // First Scan
-        if (!this.isFirstScan) {
-            statusDiv.innerHTML = "Scan the <b>CENTER</b> of ANY face to start.";
-            statusDiv.style.color = this.cssColors['white'];
-            return;
-        }
-
         // Completion
         if (isComplete) {
-            statusDiv.innerHTML = "Scanning Complete! <br> <span style='color:var(--tech-cyan)'>SOLVING...</span>";
+            statusDiv.innerHTML = "Scanning Complete! SOLVING...";
             statusDiv.style.color = this.cssColors['green'];
             return;
         }
@@ -400,7 +391,6 @@ export class VideoCapture {
         if (expectedColor) {
             const cssColor = this.cssColors[expectedColor] || '#ffffff';
             statusDiv.innerHTML = `Rotate to <b style="color:${cssColor}">${expectedColor.toUpperCase()}</b> side.<br>Match the screen.`;
-            statusDiv.style.color = '#ffffff';
         }
     }
 }

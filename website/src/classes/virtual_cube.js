@@ -34,6 +34,11 @@ export class VirtualCube {
             end: { x: 0, y: 0, z: 0 },
             delayBeforeNext: 1200
         };
+        this.dragState = {
+            active: false,
+            previous: { x: 0, y: 0 },
+            sensitivity: 0.005
+        };
 
         this.faceColor = Object.fromEntries(Object.entries(this.colorFace).map(([k, v]) => [v, k]));
         
@@ -55,6 +60,7 @@ export class VirtualCube {
         this.cubies = [];
 
         this.initThreeJS();
+        this.initMouseControls();
         window.addEventListener('resize', () => this.handleResize());
     }
 
@@ -114,6 +120,58 @@ export class VirtualCube {
         this.renderer.setSize(width, height);
     }
 
+
+    initMouseControls() {
+        this.container.addEventListener('mousedown', (e) => {
+            this.dragState.active = true;
+            this.dragState.previous = { x: e.clientX, y: e.clientY };
+            if (this.rotationState.active) {
+                this.dragState.startRotation = { 
+                    x: this.rotationState.end.x, 
+                    y: this.rotationState.end.y, 
+                    z: this.rotationState.end.z 
+                };
+            } else {
+                this.dragState.startRotation = { 
+                    x: this.cubeGroup.rotation.x, 
+                    y: this.cubeGroup.rotation.y, 
+                    z: this.cubeGroup.rotation.z 
+                };
+            }
+            this.rotationState.active = false;
+            if (this.nextMoveTimeout) clearTimeout(this.nextMoveTimeout);
+            document.body.classList.add('grabbing');
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!this.dragState.active) return;
+            this.handleDrag(e);
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (this.dragState.active) {
+                this.dragState.active = false;
+                document.body.classList.remove('grabbing');
+                if (this.dragState.startRotation) {
+                    this.rotationState.duration = 1000;
+                    this.setTargetRotation(this.dragState.startRotation);
+                }
+            }
+        });
+    }
+
+
+    handleDrag(e) {
+        const deltaX = e.clientX - this.dragState.previous.x;
+        const deltaY = e.clientY - this.dragState.previous.y;
+
+        // Apply rotation based on mouse movement
+        this.cubeGroup.rotation.y += deltaX * this.dragState.sensitivity;
+        this.cubeGroup.rotation.x += deltaY * this.dragState.sensitivity;
+
+        this.dragState.previous = { x: e.clientX, y: e.clientY };
+    }
+
     
     loop(faceColors) {
         this.animateScale();
@@ -166,11 +224,9 @@ export class VirtualCube {
             
             const controls = document.getElementById('solutionControls');
             const status = document.getElementById('status');
-            const solText = document.getElementById('solutionText');
 
             if (controls) controls.style.display = 'flex';
             if (status) status.innerHTML = "SOLVED! <br> Follow the moves on screen.";
-            if (solText) solText.innerText = "Ready to Solve";
         } else {
             const status = document.getElementById('status');
             if (status) status.innerHTML = "Solver Error. <br> Check scans.";
@@ -338,9 +394,21 @@ export class VirtualCube {
         let faceCubies = this.cubies.filter(c => c[target.axis] === target.val);
         
         faceCubies.sort((a, b) => {
-            if (Math.abs(b.y - a.y) > 0.1) return b.y - a.y; 
-            if (faceId === 'B') return b.x - a.x; 
-            return a.x - b.x; 
+            if (['F', 'B', 'L', 'R'].includes(faceId)) {
+                if (Math.abs(b.y - a.y) > 0.1) return b.y - a.y;
+            } 
+            else {
+                if (Math.abs(a.z - b.z) > 0.1) return a.z - b.z;
+            }
+            switch (faceId) {
+                case 'F': return a.x - b.x;
+                case 'B': return b.x - a.x;
+                case 'R': return b.z - a.z;
+                case 'L': return a.z - b.z;
+                case 'U': return a.x - b.x;
+                case 'D': return a.x - b.x;
+                default: return 0;
+            }
         });
 
         faceCubies.forEach((cubie, i) => {

@@ -1,3 +1,6 @@
+import { getSolverMoves } from "../utils/solver_utils.js";
+
+
 export class VirtualCube {
     constructor() {
         this.cubeState = { U: null, D: null, F: null, B: null, L: null, R: null };
@@ -38,6 +41,10 @@ export class VirtualCube {
         this.nextMoveTimeout = null;
         this.firstScanDone = false;
         this.currentExpectedFaceId = null;
+        this.scanOrder = [];
+        this.solutionMoves = [];
+        this.currentMoveIdx = -1;
+        this.isSolvedMode = false;
 
         // --- 3D RENDERER STATE ---
         this.container = document.getElementById('threeContainer');
@@ -112,6 +119,7 @@ export class VirtualCube {
         this.animateScale();
         this.animateRotation();
         this.renderer.render(this.scene, this.camera);
+        this.handleCompletion();
 
         if (!faceColors || !this.isScanning) return;
 
@@ -132,17 +140,40 @@ export class VirtualCube {
                 this.currentExpectedFaceId = faceId;
             }
 
-            if (this.isComplete()) {
-                console.log("CUBE COMPLETE!");
-                this.currentExpectedFaceId = null;
-            } else {
-                // Wait for the pulse/confirmation before moving
+            // Only guide if NOT complete
+            if (!this.isComplete()) {
                 if (this.nextMoveTimeout) clearTimeout(this.nextMoveTimeout);
-                
                 this.nextMoveTimeout = setTimeout(() => {
                     this.guideToNextFace();
-                }, this.rotationState.delayBeforeNext); 
+                }, this.rotationState.delayBeforeNext);
             }
+        }
+    }
+
+
+    handleCompletion() {
+        if (!this.isComplete() || this.isSolvedMode) return;
+
+        this.isSolvedMode = true; 
+        this.isScanning = false;
+        this.currentExpectedFaceId = null;
+
+        console.log("Scanning Complete. Solving...");
+        const moves = getSolverMoves(this.cubeState);
+
+        if (moves) {
+            this.setSolution(moves);
+            
+            const controls = document.getElementById('solutionControls');
+            const status = document.getElementById('status');
+            const solText = document.getElementById('solutionText');
+
+            if (controls) controls.style.display = 'flex';
+            if (status) status.innerHTML = "SOLVED! <br> Follow the moves on screen.";
+            if (solText) solText.innerText = "Ready to Solve";
+        } else {
+            const status = document.getElementById('status');
+            if (status) status.innerHTML = "Solver Error. <br> Check scans.";
         }
     }
 
@@ -234,12 +265,44 @@ export class VirtualCube {
         const missing = this.getMissingFaces();
         if (missing.length === 0) return;
 
-        const order = ['F', 'R', 'B', 'L', 'U', 'D'];
-        let next = order.find(f => missing.includes(f));
+        // Generate Dynamic Scan Order on First Run
+        if (this.scanOrder.length === 0) {
+            const scannedFaces = Object.keys(this.cubeState).filter(k => this.cubeState[k] !== null);
+            const startFace = scannedFaces[0] || 'F';
+            const ring = ['F', 'R', 'B', 'L'];
+            if (ring.includes(startFace)) {
+                const startIdx = ring.indexOf(startFace);
+                for (let i = 1; i <= 3; i++) {
+                    this.scanOrder.push(ring[(startIdx + i) % 4]);
+                }
+                this.scanOrder.push('U', 'D');
+            } else {
+                this.scanOrder = ['F', 'R', 'B', 'L', 'U', 'D'].filter(f => f !== startFace);
+            }
+        }
+
+        // Find the next target from our ordered list
+        let next = this.scanOrder.find(f => missing.includes(f));
         if (!next) next = missing[0];
 
         this.currentExpectedFaceId = next;
-        const target = this.getRotationForFace(next);
+        
+        // Smart Rotation Logic
+        let target = this.getRotationForFace(next);
+        const currentY = this.cubeGroup.rotation.y;
+        if (next === 'U' || next === 'D') {
+            target.y = currentY;
+        } 
+        else {
+            let baseTgt = target.y;
+            const PI2 = Math.PI * 2;
+            const cycle = Math.round((currentY - baseTgt) / PI2);
+            target.y = baseTgt + (cycle * PI2);
+            if (target.y > currentY + 0.1) {
+                target.y -= PI2;
+            }
+        }
+
         this.rotationState.duration = 1500;
         this.setTargetRotation(target);
     }
@@ -290,12 +353,12 @@ export class VirtualCube {
 
     getRotationForFace(faceId) {
         switch (faceId) {
-            case 'F': return { x: 0, y: 0, z: 0 }; 
-            case 'B': return { x: 0, y: Math.PI, z: 0 }; 
-            case 'R': return { x: 0, y: -Math.PI/2, z: 0 }; 
-            case 'L': return { x: 0, y: Math.PI/2, z: 0 }; 
-            case 'U': return { x: Math.PI/2, y: 0, z: 0 }; 
-            case 'D': return { x: -Math.PI/2, y: 0, z: 0 }; 
+            case 'F': return { x: 0, y: 0, z: 0 };
+            case 'B': return { x: 0, y: -Math.PI, z: 0 };
+            case 'R': return { x: 0, y: -Math.PI/2, z: 0 };
+            case 'L': return { x: 0, y: -Math.PI * 1.5, z: 0 };
+            case 'U': return { x: Math.PI/2, y: -Math.PI * 2, z: 0 };
+            case 'D': return { x: -Math.PI/2, y: -Math.PI * 2, z: 0 };
         }
         return { x: 0, y: 0, z: 0 };
     }
@@ -308,5 +371,80 @@ export class VirtualCube {
     
     isComplete() {
         return this.getMissingFaces().length === 0;
+    }
+
+
+    setSolution(moves) {
+        this.solutionMoves = moves;
+        this.currentMoveIdx = -1;
+    }
+
+
+    nextMove() {
+        if (this.currentMoveIdx >= this.solutionMoves.length - 1) return null;
+        this.currentMoveIdx++;
+        const move = this.solutionMoves[this.currentMoveIdx];
+        this.performMove(move);
+        return move;
+    }
+
+
+    prevMove() {
+        if (this.currentMoveIdx < 0) return null;
+        const move = this.solutionMoves[this.currentMoveIdx];
+        this.currentMoveIdx--;
+        const inverted = this.invertMove(move);
+        this.performMove(inverted);
+        return this.solutionMoves[this.currentMoveIdx] || "Start";
+    }
+
+
+    invertMove(move) {
+        if (move.includes("'")) return move.replace("'", "");
+        if (move.includes("2")) return move;
+        return move + "'";
+    }
+
+
+    performMove(move) {
+        let face = move[0];
+        let modifier = move.substring(1);
+        let times = 1;
+        let clockwise = true;
+
+        if (modifier === "2") times = 2;
+        else if (modifier === "'") clockwise = false;
+        for (let i = 0; i < times; i++) {
+            this.rotateLayer(face, clockwise);
+        }
+    }
+
+
+    rotateLayer(face, clockwise) {
+        const filters = {
+            'R': c => c.x > 0.1,  'L': c => c.x < -0.1,
+            'U': c => c.y > 0.1,  'D': c => c.y < -0.1,
+            'F': c => c.z > 0.1,  'B': c => c.z < -0.1
+        };
+        const axes = {
+            'R': new THREE.Vector3(1, 0, 0), 'L': new THREE.Vector3(1, 0, 0),
+            'U': new THREE.Vector3(0, 1, 0), 'D': new THREE.Vector3(0, 1, 0),
+            'F': new THREE.Vector3(0, 0, 1), 'B': new THREE.Vector3(0, 0, 1)
+        };
+
+        const selection = this.cubies.filter(filters[face]);
+        const axis = axes[face];
+        let angle = Math.PI / 2; 
+        
+        if (face === 'R' || face === 'U' || face === 'F') angle *= -1; 
+        if (!clockwise) angle *= -1;
+
+        selection.forEach(cubie => {
+            cubie.mesh.position.applyAxisAngle(axis, angle);
+            cubie.mesh.rotateOnWorldAxis(axis, angle);
+            cubie.x = Math.round(cubie.mesh.position.x);
+            cubie.y = Math.round(cubie.mesh.position.y);
+            cubie.z = Math.round(cubie.mesh.position.z);
+        });
     }
 }

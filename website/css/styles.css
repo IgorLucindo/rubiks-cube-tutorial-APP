@@ -66,6 +66,49 @@ canvas#canvasOutput, #threeContainer {
     display: block;
 }
 
+.controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 15px;
+    width: 100%;
+}
+
+.controls button {
+    background-color: #333;
+    color: #fff;
+    border: 1px solid #555;
+    padding: 10px 25px;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+
+.controls button:hover {
+    background-color: #444;
+    border-color: #777;
+    transform: translateY(-1px);
+}
+
+.controls button:active {
+    background-color: #222;
+    transform: translateY(1px);
+}
+
+#solutionText {
+    text-align: center;
+    margin-top: 15px;
+    font-size: 1.2rem;
+    color: var(--cube-green);
+    font-weight: bold;
+    min-height: 1.5em;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    letter-spacing: 0.5px;
+}
+
 #status {
     position: absolute;
     bottom: 10px;

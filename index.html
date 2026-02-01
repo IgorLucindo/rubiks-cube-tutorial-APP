@@ -22,6 +22,12 @@
         <div class="cube-container">
             <h3>Virtual Cube</h3>
             <div id="threeContainer"></div>
+            
+            <div class="controls" id="solutionControls" style="display:none;">
+                <button id="prevBtn">&lt; Prev</button>
+                <button id="nextBtn">Next &gt;</button>
+            </div>
+            <p id="solutionText"></p>
         </div>
     </div>
 
@@ -30,6 +36,7 @@
         window.cvReady = new Promise((resolve) => {window._onOpenCvReady = resolve;});
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/rubiks-cube-solver@1.2.0/lib/index.common.min.js"></script>
     <script async src="https://docs.opencv.org/4.5.0/opencv.js" onload="_onOpenCvReady();" type="text/javascript"></script>
     <script type="module" src="website/src/index.js"></script>
 </body>

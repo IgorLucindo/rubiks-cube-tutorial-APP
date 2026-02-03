@@ -23,7 +23,15 @@ function mainLoop() {
 // Startup Sequence
 window.cvReady.then(() => {
     console.log("OpenCV Ready. Initializing...");
-    mainLoop();
+    videoCap.start()
+        .then(() => {
+            console.log("Camera Started. Beginning Global Loop.");
+            mainLoop();
+        })
+        .catch(err => {
+            console.error("Camera failed to start (Virtual Mode only):", err);
+            mainLoop();
+        });
 });
 
 // UI Listeners for the solution buttons still live here

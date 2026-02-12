@@ -77,6 +77,7 @@ export class VirtualCube {
         this.solutionMoves = [];
         this.currentMoveIdx = -1;
         this.isSolvedMode = false;
+        this.isAutoSolving = false;
 
         // Three.js State
         this.scene = null;
@@ -331,20 +332,18 @@ export class VirtualCube {
             if (['F', 'B', 'L', 'R'].includes(faceId)) {
                 if (Math.abs(b.y - a.y) > 0.1) return b.y - a.y; 
             }
-            else if (faceId === 'U') {
-                if (Math.abs(a.z - b.z) > 0.1) return a.z - b.z;
-            }
-            else if (faceId === 'D') {
-                if (Math.abs(a.x - b.x) > 0.1) return a.x - b.x;
-                return b.z - a.z;
-            }
+
             switch (faceId) {
+                case 'U': 
+                    if (Math.abs(a.z - b.z) > 0.1) return a.z - b.z;
+                    return a.x - b.x;
+                case 'D':
+                    if (Math.abs(b.z - a.z) > 0.1) return b.z - a.z;
+                    return a.x - b.x;
                 case 'F': return a.x - b.x; 
                 case 'B': return b.x - a.x; 
                 case 'R': return b.z - a.z; 
                 case 'L': return a.z - b.z; 
-                case 'U': return a.x - b.x; 
-                case 'D': return 0;
                 default: return 0;
             }
         });
@@ -403,20 +402,49 @@ export class VirtualCube {
 
 
     forceUnsolvedState() {
+        this.isSolvedMode = false;
+        this.solutionMoves = [];
+        this.currentMoveIdx = -1;
+
         if (!this.orientationLocked) this.orientationLocked = true;
+        
+        // Reset to solved state first
         const faces = ['U', 'D', 'F', 'B', 'L', 'R'];
         faces.forEach(f => this.cubeState[f] = Array(9).fill(f));
-        const topIndices = [0, 1, 2];
-        topIndices.forEach(i => {
-            this.cubeState['F'][i] = 'R'; 
-            this.cubeState['R'][i] = 'B';
-            this.cubeState['B'][i] = 'L';
-            this.cubeState['L'][i] = 'F';
-        });
+
+        // Define a simple valid scramble (e.g., U and F moves)
+        // This uses the actual rotation logic to ensure the cube stays "possible"
+        this.rotateLayer('U', true); 
+        // this.rotateLayer('F', true);
+
+        // Update the logical cubeState to match the new visual state
+        // (This part requires a helper to sync the 3D cubie colors back to this.cubeState)
+        // this.syncCubeStateFromVisuals();
+
         faces.forEach(faceId => {
             const visualColors = this.cubeState[faceId].map(id => this.faceColor[id]);
             this.update3DColors(faceId, visualColors);
         });
+    }
+
+    
+    autoSolve() {
+        if (this.isAutoSolving || this.solutionMoves.length === 0) return;
+        this.isAutoSolving = true;
+
+        const interval = setInterval(() => {
+            // Stop if we reached the end or if user manually forced a reset (clearing moves)
+            if (this.currentMoveIdx >= this.solutionMoves.length - 1 || this.solutionMoves.length === 0) {
+                clearInterval(interval);
+                this.isAutoSolving = false;
+                console.log("Auto-solve finished.");
+                return;
+            }
+
+            if (!this.moveAnim.active) {
+                this.nextMove();
+            }
+        }, 50); 
     }
 
 
@@ -531,39 +559,57 @@ export class VirtualCube {
     animateMove(move) {
         if (this.moveAnim.active) return;
 
-        let face = move[0];
-        let modifier = move.substring(1);
+        // Parse Move
+        let modifier = "";
+        if (move.endsWith("'")) modifier = "'";
+        else if (move.endsWith("2")) modifier = "2";
+        let base = move.substring(0, move.length - modifier.length);
+        if (['f','b','r','l','u','d'].includes(base)) base = base.toUpperCase();
+
         let isDouble = modifier === "2";
         let clockwise = modifier !== "'";
 
-        // Calculate Angle
-        let angle = Math.PI / 2;
-        if (face === 'R' || face === 'U' || face === 'F') angle *= -1;
+        // Move Logic: Axis, Filter, Direction
+        const moveDefinitions = {
+            'R': { axis: 'x', filter: c => c.x > 0.1,  angle: -1 },
+            'L': { axis: 'x', filter: c => c.x < -0.1, angle: 1 },
+            'U': { axis: 'y', filter: c => c.y > 0.1,  angle: -1 },
+            'D': { axis: 'y', filter: c => c.y < -0.1, angle: 1 },
+            'F': { axis: 'z', filter: c => c.z > 0.1,  angle: -1 },
+            'B': { axis: 'z', filter: c => c.z < -0.1, angle: 1 },
+
+            // CFOP Moves (Slice & Rotation)
+            'M': { axis: 'x', filter: c => Math.abs(c.x) < 0.1, angle: 1 }, 
+            'E': { axis: 'y', filter: c => Math.abs(c.y) < 0.1, angle: 1 },
+            'S': { axis: 'z', filter: c => Math.abs(c.z) < 0.1, angle: -1 },
+            'x': { axis: 'x', filter: c => true, angle: -1 },
+            'y': { axis: 'y', filter: c => true, angle: -1 },
+            'z': { axis: 'z', filter: c => true, angle: -1 },
+        };
+
+        const def = moveDefinitions[base];
+        if (!def) {
+            console.warn(`Skipping unsupported move: ${move}`);
+            if (this.isAutoSolving) this.currentMoveIdx++;
+            return;
+        }
+
+        let angle = Math.PI / 2 * def.angle;
         if (!clockwise) angle *= -1;
         if (isDouble) angle *= 2;
 
-        // Select Cubies
-        const filters = {
-            'R': c => c.x > 0.1,  'L': c => c.x < -0.1,
-            'U': c => c.y > 0.1,  'D': c => c.y < -0.1,
-            'F': c => c.z > 0.1,  'B': c => c.z < -0.1
-        };
-        const activeCubies = this.cubies.filter(filters[face]);
+        const axisVector = new THREE.Vector3(
+            def.axis === 'x' ? 1 : 0,
+            def.axis === 'y' ? 1 : 0,
+            def.axis === 'z' ? 1 : 0
+        );
 
-        // Select Axis
-        const axes = {
-            'R': new THREE.Vector3(1, 0, 0), 'L': new THREE.Vector3(1, 0, 0),
-            'U': new THREE.Vector3(0, 1, 0), 'D': new THREE.Vector3(0, 1, 0),
-            'F': new THREE.Vector3(0, 0, 1), 'B': new THREE.Vector3(0, 0, 1)
-        };
-
-        // Start Animation
         this.moveAnim = {
             active: true,
             startTime: Date.now(),
             duration: 400,
-            cubies: activeCubies,
-            axis: axes[face],
+            cubies: this.cubies.filter(def.filter),
+            axis: axisVector,
             totalAngle: angle,
             accumulated: 0
         };
@@ -592,7 +638,7 @@ export class VirtualCube {
 
     prevMove() {
         if (this.moveAnim.active || this.currentMoveIdx < 0) return;
-        
+
         const move = this.solutionMoves[this.currentMoveIdx];
         this.currentMoveIdx--;
         this.animateMove(this.invertMove(move));

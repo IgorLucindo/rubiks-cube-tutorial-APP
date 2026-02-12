@@ -36,11 +36,15 @@ window.cvReady.then(() => {
 
 // Debug menu
 if (DEBUG) {
-    const btn = document.getElementById('debugBtn');
-    if (btn) {
-        btn.style.display = 'block';
-        btn.addEventListener('click', () => {
-            virtualCube.forceUnsolvedState();
-        });
-    }
+    const forceBtn = document.getElementById('forceCubeBtn');
+    const autoBtn = document.getElementById('autoSolveBtn');
+
+    forceBtn.style.display = 'block';
+    forceBtn.addEventListener('click', () => {
+        virtualCube.forceUnsolvedState();
+    });
+    autoBtn.style.display = 'block';
+    autoBtn.addEventListener('click', () => {
+        virtualCube.autoSolve();
+    });
 }

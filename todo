@@ -1,3 +1,10 @@
+- white face on scan looks rotated (maybe it doesn't adapt when we first change face after scanning the first color)
+- forceUnsolvedCube with errors
+
+- change colors of the virtual cube (make more closer to real colors)
+- change cube rotation if movement is hard to see (smart rotator)
+- cube is solving yellow face first, instead of white (change)
+
 - don't allow white and yellow face for first scan
 
 - add animations for stopping camera when completing scan

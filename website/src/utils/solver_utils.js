@@ -5,14 +5,9 @@ export function getSolverMoves(cubeState) {
         return { error: validationError };
     }
 
-    // Map internal Face IDs (F, R, U...) to Solver Characters (f, r, u...)
-    // Library strictly expects: Front=Green, Up=White
-    const typeMap = {
-        'F': 'f', 'R': 'r', 'U': 'u', 
-        'D': 'd', 'L': 'l', 'B': 'b'
-    };
+    const typeMap = { 'F': 'f', 'R': 'r', 'U': 'u', 'D': 'd', 'L': 'l', 'B': 'b' };
     
-    // Library expects order: Front, Right, Up, Down, Left, Back
+    // STRICT ORDER: Required by library to avoid crashes
     const faceOrder = ['F', 'R', 'U', 'D', 'L', 'B'];
     let cubeString = '';
 
@@ -24,39 +19,38 @@ export function getSolverMoves(cubeState) {
             });
         });
 
-        // Solve
         if (typeof window.rubiksCubeSolver === 'undefined') {
-            return { error: "Solver library not loaded. Check internet." };
+            return { error: "Solver library not loaded." };
         }
 
-        // 'partitioned: true' gives us the CFOP stages
+        // CFOP Mode: Solves White Cross first
         const result = window.rubiksCubeSolver(cubeString, { partitioned: true });
         
-        // Collect all parts
-        const parts = [
-            result.cross, 
-            result.f2l, 
-            result.oll, 
-            result.pll
-        ];
-
-        // Flatten into one giant space-separated string
+        const parts = [result.cross, result.f2l, result.oll, result.pll];
         let allMovesRaw = parts.map(part => {
             if (Array.isArray(part)) return part.join(' ');
             return part || '';
         }).join(' ');
 
-        // Clean up the string
-        const moves = allMovesRaw
-            .replace(/prime/g, "'") 
-            .split(/\s+/)
-            .filter(m => m.trim().length > 0);
+        // Clean up
+        const cleaned = allMovesRaw.replace(/prime/g, "'").replace(/\s+/g, ' ');
+        const tokens = cleaned.split(' ').filter(m => m.trim().length > 0);
+        
+        const moves = [];
+        for (let i = 0; i < tokens.length; i++) {
+            const token = tokens[i];
+            if ((token === "'" || token === "2") && moves.length > 0) {
+                moves[moves.length - 1] += token;
+            } else {
+                moves.push(token);
+            }
+        }
 
         return { moves: moves };
 
     } catch (e) {
         console.error("Solver Logic Crash:", e);
-        return { error: "Impossible Cube State. Please rescan." };
+        return { error: "Impossible Cube State." };
     }
 }
 
@@ -64,24 +58,13 @@ export function getSolverMoves(cubeState) {
 function validateState(cubeState) {
     const counts = {};
     const colors = ['F', 'R', 'U', 'D', 'L', 'B'];
-
-    // Initialize counts
     colors.forEach(c => counts[c] = 0);
-
-    // Count every sticker
     Object.values(cubeState).forEach(faceStickers => {
         if (!faceStickers) return;
-        faceStickers.forEach(s => {
-            if (counts[s] !== undefined) counts[s]++;
-        });
+        faceStickers.forEach(s => { if (counts[s] !== undefined) counts[s]++; });
     });
-
-    // Check if any color has != 9 stickers
     for (const color of colors) {
-        if (counts[color] !== 9) {
-            const map = {'F':'Green', 'R':'Red', 'U':'White', 'D':'Yellow', 'L':'Orange', 'B':'Blue'};
-            return `Scan Error: Found ${counts[color]} ${map[color]} stickers (need 9).`;
-        }
+        if (counts[color] !== 9) return `Scan Error: Invalid sticker count for ${color}`;
     }
     return null;
 }

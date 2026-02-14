@@ -1,3 +1,5 @@
+- fix nextMove and prevMove
+- white face is rotated depending on first scanned face
 - remove drag control in nextMove prevMove btns
 - mobile responsiveness
 - cube is solving yellow face first, instead of white (change)

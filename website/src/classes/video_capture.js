@@ -387,14 +387,7 @@ export class VideoCapture {
 
     updateStatusText(expectedColor, isComplete) {
         const statusDiv = document.getElementById('status');
-        if (!statusDiv) return;
-
-        // Completion
-        if (isComplete) {
-            statusDiv.innerHTML = "Scanning Complete! SOLVING...";
-            statusDiv.style.color = this.cssColors['green'];
-            return;
-        }
+        if (!statusDiv || isComplete) return;
 
         // Guidance
         if (expectedColor) {

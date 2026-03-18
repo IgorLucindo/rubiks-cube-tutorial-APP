@@ -501,21 +501,20 @@ export class VirtualCube {
 
         console.log("Scanning Complete. Solving...");
         const moves = getSolverMoves(this.cubeState);
+        const status = document.getElementById('status');
 
         if (moves && !moves.error) {
             this.setSolution(moves.moves);
             const controls = document.getElementById('solutionControls');
-            const status = document.getElementById('status');
-            if (controls) controls.style.display = 'flex';
-            if (status) status.innerHTML = "SOLVED! <br> Follow the moves on screen.";
+            controls.style.display = 'flex';
+            status.innerHTML = "SOLVED! <br> Follow the moves on screen.";
             this.updateSolutionButtons();
             
             // Layout animation toggle
             document.body.classList.add('scan-complete');
             setTimeout(() => window.dispatchEvent(new Event('resize')), 400);
         } else {
-            const status = document.getElementById('status');
-            if (status) status.innerHTML = moves?.error || "Solver Error.";
+            status.innerHTML = moves?.error || "Solver Error.";
         }
 
         console.log("Cube Solved.");

@@ -1,9 +1,9 @@
 .app-header {
     width: 100%;
-    background: rgba(17, 17, 17, 0.8);
+    background: rgba(17, 17, 17, 0.95); 
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    padding-top: calc(0.8rem + env(safe-area-inset-top)); 
+    padding-top: env(safe-area-inset-top, 0.8rem); 
     padding-bottom: 0.8rem;
     text-align: center;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);

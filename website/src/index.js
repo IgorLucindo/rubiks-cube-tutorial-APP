@@ -2,9 +2,10 @@ import { VideoCapture } from "./classes/video_capture.js";
 import { VirtualCube } from "./classes/virtual_cube.js";
 import { initToggleMenu } from "./utils/menu_utils.js";
 
+const cfg = {isMobile: window.matchMedia("(max-width: 768px)").matches};
 
 const videoCap = new VideoCapture();
-const virtualCube = new VirtualCube();
+const virtualCube = new VirtualCube(cfg);
 
 
 function mainLoop() {

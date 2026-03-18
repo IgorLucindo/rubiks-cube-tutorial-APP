@@ -2,7 +2,8 @@ import { getSolverMoves } from "../utils/solver_utils.js";
 
 
 export class VirtualCube {
-    constructor() {
+    constructor(cfg) {
+        this.cfg = cfg;
         this.container = document.getElementById('threeContainer');
         this.cubeState = { U: null, D: null, F: null, B: null, L: null, R: null };
         
@@ -92,7 +93,8 @@ export class VirtualCube {
     initThreeJS() {
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-        this.camera.position.set(0, 0, 9); 
+        const camera_posz = 7 ? 7.7 : this.cfg.isMobile;
+        this.camera.position.set(0, 0, camera_posz); 
 
         this.renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
         this.container.appendChild(this.renderer.domElement);

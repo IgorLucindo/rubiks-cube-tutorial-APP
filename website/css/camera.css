@@ -76,7 +76,7 @@ video {
     .camera-container {
         max-width: 100%;
         width: 100%;
-        flex: 2.5;
+        flex: 2;
         min-height: 0; 
     }
     
@@ -94,7 +94,7 @@ video {
     }
     
     body.scan-complete .camera-container {
-        flex: 0.4;
+        flex: 0.25;
     }
     
     body.scan-complete #cameraPlaceholder svg {

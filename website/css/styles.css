@@ -29,7 +29,7 @@ h3 {
     width: 100%;
     flex: 1; 
     min-height: 0;
-    padding: 0 20px 80px 20px; 
+    padding: 20px; /* Simplified padding for uniformity */
     box-sizing: border-box;
 }
 
@@ -56,10 +56,8 @@ body.grabbing #threeContainer {
 }
 
 .copyright {
-    position: absolute;
-    bottom: 15px;
-    right: 20px;
-    margin: 0;
+    margin: 0 0 15px 0; /* Natural flow positioning instead of absolute */
+    text-align: center;
     font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.3);
     letter-spacing: 0.5px;
@@ -162,10 +160,9 @@ body.grabbing #threeContainer {
 /* Mobile */
 @media (max-width: 768px) {
     body {
-        height: auto;
-        min-height: 100vh;
-        overflow-y: auto;
-        overflow-x: hidden;
+        height: 100vh;
+        height: 100dvh;
+        overflow: hidden;
         justify-content: flex-start; 
     }
     
@@ -175,13 +172,5 @@ body.grabbing #threeContainer {
         gap: 10px;
         height: 100%;
         justify-content: flex-start;
-    }
-
-    .copyright {
-        position: relative;
-        bottom: auto;
-        right: auto;
-        margin: 20px 0;
-        text-align: center;
     }
 }

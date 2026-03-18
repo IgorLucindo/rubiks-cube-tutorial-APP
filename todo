@@ -1,3 +1,0 @@
-- cube is solving yellow face first, instead of white (change), also, it is not solving the cube correctly depending on current state
-- add undo btn in virtual cube container at the side of the rotate icon to undo scan
-- mobile responsiveness

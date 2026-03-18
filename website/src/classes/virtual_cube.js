@@ -80,7 +80,7 @@ export class VirtualCube {
         this.cubies = [];
 
         this.initThreeJS();
-        this.initMouseControls();
+        this.initDragControls();
         window.addEventListener('resize', () => this.handleResize());
         
         window._prevMove = () => this.prevMove();
@@ -135,12 +135,12 @@ export class VirtualCube {
     }
 
 
-    initMouseControls() {
-        this.container.addEventListener('mousedown', (e) => {
-            if (e.target?.closest && e.target.closest('.controls')) return;
+    initDragControls() {
+        const handleStart = (clientX, clientY, target) => {
+            if (target?.closest && target.closest('.controls')) return;
 
             this.dragState.active = true;
-            this.dragState.previous = { x: e.clientX, y: e.clientY };
+            this.dragState.previous = { x: clientX, y: clientY };
             
             if (this.rotationState.active) {
                 this.dragState.startRotation = { ...this.rotationState.end };
@@ -155,18 +155,18 @@ export class VirtualCube {
             this.rotationState.active = false;
             if (this.nextMoveTimeout) clearTimeout(this.nextMoveTimeout);
             document.body.classList.add('grabbing');
-        });
+        };
 
-        window.addEventListener('mousemove', (e) => {
+        const handleMove = (clientX, clientY) => {
             if (!this.dragState.active) return;
-            const deltaX = e.clientX - this.dragState.previous.x;
-            const deltaY = e.clientY - this.dragState.previous.y;
+            const deltaX = clientX - this.dragState.previous.x;
+            const deltaY = clientY - this.dragState.previous.y;
             this.cubeGroup.rotation.y += deltaX * this.dragState.sensitivity;
             this.cubeGroup.rotation.x += deltaY * this.dragState.sensitivity;
-            this.dragState.previous = { x: e.clientX, y: e.clientY };
-        });
+            this.dragState.previous = { x: clientX, y: clientY };
+        };
 
-        window.addEventListener('mouseup', () => {
+        const handleEnd = () => {
             if (this.dragState.active) {
                 this.dragState.active = false;
                 document.body.classList.remove('grabbing');
@@ -175,7 +175,28 @@ export class VirtualCube {
                     this.setTargetRotation(this.dragState.startRotation);
                 }
             }
-        });
+        };
+
+        // --- Mouse Events ---
+        this.container.addEventListener('mousedown', (e) => handleStart(e.clientX, e.clientY, e.target));
+        window.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY));
+        window.addEventListener('mouseup', handleEnd);
+
+        // --- Touch Events ---
+        this.container.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) {
+                handleStart(e.touches[0].clientX, e.touches[0].clientY, e.target);
+            }
+        }, { passive: false });
+        
+        window.addEventListener('touchmove', (e) => {
+            if (this.dragState.active && e.touches.length > 0) {
+                handleMove(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: false });
+        
+        window.addEventListener('touchend', handleEnd);
+        window.addEventListener('touchcancel', handleEnd);
     }
 
     _mod4(n) {
@@ -379,8 +400,14 @@ export class VirtualCube {
             this.firstScanDone = false;
             this.currentExpectedFaceId = null;
             this.scanOrder = [];
+            
+            // Rotate back to default F view
+            this.rotationState.duration = 800;
+            this.setTargetRotation({ x: 0, y: 0, z: 0 });
         } else {
             this.currentExpectedFaceId = faceId;
+            // Let the cube guide the user back to the face we just undid
+            this.guideToNextFace();
         }
 
         // If we already completed scanning/solving, go back to scanning mode.
@@ -388,6 +415,10 @@ export class VirtualCube {
         this.isScanning = true;
         this.solutionMoves = [];
         this.currentMoveIdx = -1;
+        
+        document.body.classList.remove('scan-complete');
+        setTimeout(() => window.dispatchEvent(new Event('resize')), 400);
+
         const controls = document.getElementById('solutionControls');
         if (controls) controls.style.display = 'none';
         this.updateSolutionButtons();
@@ -473,6 +504,10 @@ export class VirtualCube {
             if (controls) controls.style.display = 'flex';
             if (status) status.innerHTML = "SOLVED! <br> Follow the moves on screen.";
             this.updateSolutionButtons();
+            
+            // Layout animation toggle
+            document.body.classList.add('scan-complete');
+            setTimeout(() => window.dispatchEvent(new Event('resize')), 400);
         } else {
             const status = document.getElementById('status');
             if (status) status.innerHTML = moves?.error || "Solver Error.";
@@ -487,6 +522,9 @@ export class VirtualCube {
         this.solutionMoves = [];
         this.currentMoveIdx = -1;
 
+        document.body.classList.remove('scan-complete');
+        setTimeout(() => window.dispatchEvent(new Event('resize')), 400);
+
         // Reset geometry
         let idx = 0;
         for (let x = -1; x <= 1; x++) {
@@ -500,15 +538,6 @@ export class VirtualCube {
             }
         }
 
-        // Define cube state
-        // this.cubeState = {
-        //     'U': ['D', 'D', 'D', 'U', 'U', 'U', 'U', 'U', 'U'], 
-        //     'D': ['D', 'D', 'D', 'D', 'D', 'D', 'U', 'U', 'U'],
-        //     'F': ['F', 'F', 'F', 'F', 'F', 'F', 'F', 'F', 'F'],
-        //     'R': ['R', 'R', 'L', 'R', 'R', 'L', 'R', 'R', 'L'],
-        //     'B': ['B', 'B', 'B', 'B', 'B', 'B', 'B', 'B', 'B'],
-        //     'L': ['R', 'L', 'L', 'R', 'L', 'L', 'R', 'L', 'L']
-        // };
         this.cubeState = {
             'U': ['L', 'D', 'F', 'U', 'U', 'R', 'L', 'L', 'B'],
             'D': ['B', 'L', 'B', 'F', 'D', 'F', 'U', 'F', 'U'],

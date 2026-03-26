@@ -507,7 +507,7 @@ export class VirtualCube {
             this.setSolution(moves.moves);
             const controls = document.getElementById('solutionControls');
             controls.style.display = 'flex';
-            status.innerHTML = "SOLVED! <br> Follow the moves on screen.";
+            status.innerHTML = "SOLUTION READY! <br> Use the arrow buttons to follow the 3D guide.";
             this.updateSolutionButtons();
             
             // Layout animation toggle
@@ -568,6 +568,10 @@ export class VirtualCube {
                 clearInterval(interval);
                 this.isAutoSolving = false;
                 console.log("Auto-solve finished.");
+                return;
+            }
+
+            if (this.dragState.active) {
                 return;
             }
 
